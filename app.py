@@ -52,18 +52,19 @@ trip_output = api.model('TripOutput', {
 
 def get_current_location():
     try:
+        # Using an IP-based service to get location
         response = requests.get('https://ipinfo.io')
         data = response.json()
+        print(f"IPInfo Response: {data}")  # Debugging line
         if 'loc' in data:
             latitude, longitude = data['loc'].split(',')
             print(f"Current Location Latitude: {latitude}, Longitude: {longitude}")  # Debugging line
             return float(latitude), float(longitude)
         else:
-            raise ValueError("Location data not found")
+            raise ValueError("Location data not found in IPInfo response")
     except Exception as e:
         print(f"Error retrieving current location: {e}")
         return None, None
-
 
 def fetch_museum_data(city_name):
     url = f"https://historyproject.somee.com/api/Museums/city/{city_name}"
@@ -73,11 +74,14 @@ def fetch_museum_data(city_name):
         cleaned_museum_data = [{key: value for key, value in museum.items() if key != 'id'} for museum in museum_data]
         return {"city": city_name, "data": cleaned_museum_data}
     else:
-        print(f"Error: {response.status_code}")
+        print(f"Error fetching museum data for '{city_name}': {response.status_code}")
         return None
 
 def calculate_distance(point1, point2):
-    return geodesic((point1.latitude, point1.longitude), (point2.latitude, point2.longitude)).kilometers
+    print(f"Calculating distance from {point1} to {point2}")  # Debugging line
+    distance = geodesic((point1.latitude, point1.longitude), (point2.latitude, point2.longitude)).kilometers
+    print(f"Calculated Distance: {distance} km")  # Debugging line
+    return distance
 
 def fetch_museums_for_cities(cities):
     all_museums = []
