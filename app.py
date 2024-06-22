@@ -56,12 +56,14 @@ def get_current_location():
         data = response.json()
         if 'loc' in data:
             latitude, longitude = data['loc'].split(',')
+            print(f"Current Location Latitude: {latitude}, Longitude: {longitude}")  # Debugging line
             return float(latitude), float(longitude)
         else:
             raise ValueError("Location data not found")
     except Exception as e:
         print(f"Error retrieving current location: {e}")
         return None, None
+
 
 def fetch_museum_data(city_name):
     url = f"https://historyproject.somee.com/api/Museums/city/{city_name}"
