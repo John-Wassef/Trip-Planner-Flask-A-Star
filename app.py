@@ -50,18 +50,21 @@ trip_output = api.model('TripOutput', {
     'trip_plan': fields.List(fields.Nested(museum_with_distance_output), required=True, description='Planned trip to museums')
 })
 
+import requests
+
 def get_current_location():
     try:
-        response = requests.get('https://freegeoip.app/json/')
+        response = requests.get('http://ip-api.com/json/')
         data = response.json()
-        print(f"FreeGeoIP Response: {data}")  # Debugging line
-        if 'latitude' in data and 'longitude' in data:
-            return float(data['latitude']), float(data['longitude'])
+        print(f"IP-API Response: {data}")  # Debugging line
+        if 'lat' in data and 'lon' in data:
+            return float(data['lat']), float(data['lon'])
         else:
-            raise ValueError("Location data not found in FreeGeoIP response")
+            raise ValueError("Location data not found in IP-API response")
     except Exception as e:
         print(f"Error retrieving current location: {e}")
         return None, None
+
 
 
 def fetch_museum_data(city_name):
