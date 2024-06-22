@@ -52,19 +52,17 @@ trip_output = api.model('TripOutput', {
 
 def get_current_location():
     try:
-        # Using an IP-based service to get location
-        response = requests.get('https://ipinfo.io')
+        response = requests.get('https://freegeoip.app/json/')
         data = response.json()
-        print(f"IPInfo Response: {data}")  # Debugging line
-        if 'loc' in data:
-            latitude, longitude = data['loc'].split(',')
-            print(f"Current Location Latitude: {latitude}, Longitude: {longitude}")  # Debugging line
-            return float(latitude), float(longitude)
+        print(f"FreeGeoIP Response: {data}")  # Debugging line
+        if 'latitude' in data and 'longitude' in data:
+            return float(data['latitude']), float(data['longitude'])
         else:
-            raise ValueError("Location data not found in IPInfo response")
+            raise ValueError("Location data not found in FreeGeoIP response")
     except Exception as e:
         print(f"Error retrieving current location: {e}")
         return None, None
+
 
 def fetch_museum_data(city_name):
     url = f"https://historyproject.somee.com/api/Museums/city/{city_name}"
