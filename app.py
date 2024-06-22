@@ -162,5 +162,6 @@ class ShowMuseums(Resource):
 
         return museums
 
+# Only include this block if you want to run this script directly for development
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
