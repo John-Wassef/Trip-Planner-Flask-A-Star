@@ -19,7 +19,7 @@ This is a Flask-based API that helps plan a trip to museums in various cities. I
 **Request Body:**
 ```json
 {
-  "cities": ["City1", "City2"],
+  "cities": ["City1", "City2",...],
   "start_location": "current location" // or a specific museum name
 }
 ```
@@ -48,7 +48,7 @@ This is a Flask-based API that helps plan a trip to museums in various cities. I
 **Request Body:**
 ```json
 {
-  "cities": ["City1", "City2"]
+  "cities": ["City1", "City2",...]
 }
 ```
 
