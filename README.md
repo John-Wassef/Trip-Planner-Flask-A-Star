@@ -119,10 +119,6 @@ This is a Flask-based API that helps plan a trip to museums in various cities. I
 
 Make sure to set the appropriate environment variables and configurations on Render to match your local setup.
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
 ## Acknowledgments
 
 - Flask
