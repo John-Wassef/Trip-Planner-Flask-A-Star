@@ -20,7 +20,7 @@ This is a Flask-based API that helps plan a trip to museums in various cities. I
 ```json
 {
   "cities": ["City1", "City2"],
-  "start_location": "current location" // or a specific museum name
+  "start_location": "current location" // or a specific museum name/index
 }
 ```
 
@@ -129,3 +129,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - Flask-RESTX
 - Geopy
 - Render
+
+## API Link
+
+The API is hosted at: [https://trip-planner-flask.onrender.com](https://trip-planner-flask.onrender.com)
