@@ -4,10 +4,12 @@ from flask_cors import CORS
 from geopy.distance import geodesic
 from collections import namedtuple
 import requests
+import heapq
 
 app = Flask(__name__)
 CORS(app)
-api = Api(app, version='1.0', title='Museum Trip Planner API', description='API to plan a trip to museums in various cities')
+api = Api(app, version='1.0', title='Museum Trip Planner API',
+          description='API to plan a trip to museums in various cities')
 
 # Customize Swagger UI to remove 'X-Field'
 app.config['SWAGGER_UI_DOC_EXPANSION'] = 'none'
@@ -19,7 +21,8 @@ Point = namedtuple('Point', ['latitude', 'longitude'])
 # Define the input model for the POST request
 trip_input = api.model('TripInput', {
     'cities': fields.List(fields.String, required=True, description='List of cities to fetch museums from'),
-    'start_location': fields.String(required=True, description="Start location (either 'current location' or a museum name/index)")
+    'start_location': fields.String(required=True,
+                                    description="Start location (either 'current location' or a museum name/index)")
 })
 
 # Define the input model for showing museums in cities
@@ -47,8 +50,10 @@ museum_with_distance_output = api.model('MuseumWithDistance', {
 })
 
 trip_output = api.model('TripOutput', {
-    'trip_plan': fields.List(fields.Nested(museum_with_distance_output), required=True, description='Planned trip to museums')
+    'trip_plan': fields.List(fields.Nested(museum_with_distance_output), required=True,
+                             description='Planned trip to museums')
 })
+
 
 def get_current_location():
     try:
@@ -66,6 +71,7 @@ def get_current_location():
         print(f"Error retrieving current location: {e}")
         return None, None
 
+
 def fetch_museum_data(city_name):
     url = f"https://historyproject.somee.com/api/Museums/city/{city_name}"
     response = requests.get(url)
@@ -77,11 +83,13 @@ def fetch_museum_data(city_name):
         print(f"Error fetching museum data for '{city_name}': {response.status_code}")
         return None
 
+
 def calculate_distance(point1, point2):
     print(f"Calculating distance from {point1} to {point2}")  # Debugging line
     distance = geodesic((point1.latitude, point1.longitude), (point2.latitude, point2.longitude)).kilometers
     print(f"Calculated Distance: {distance} km")  # Debugging line
     return distance
+
 
 def fetch_museums_for_cities(cities):
     all_museums = []
@@ -94,6 +102,49 @@ def fetch_museums_for_cities(cities):
         else:
             print(f"No museum data found for '{city}'.")
     return all_museums
+
+
+def heuristic(a, b):
+    return geodesic((a.latitude, a.longitude), (b.latitude, b.longitude)).kilometers
+
+
+def a_star_search(start, goal, museums):
+    open_list = []
+    heapq.heappush(open_list, (0, start))
+    came_from = {}
+    g_score = {museum['name']: float('inf') for museum in museums}
+    g_score[start['name']] = 0
+    f_score = {museum['name']: float('inf') for museum in museums}
+    f_score[start['name']] = heuristic(Point(start['latitude'], start['longitude']), goal)
+
+    while open_list:
+        _, current = heapq.heappop(open_list)
+
+        if current['name'] == goal['name']:
+            total_path = [current]
+            while current['name'] in came_from:
+                current = came_from[current['name']]
+                total_path.append(current)
+            total_path.reverse()
+            return total_path
+
+        for museum in museums:
+            if museum['name'] == current['name']:
+                continue
+
+            tentative_g_score = g_score[current['name']] + heuristic(Point(current['latitude'], current['longitude']),
+                                                                     Point(museum['latitude'], museum['longitude']))
+
+            if tentative_g_score < g_score[museum['name']]:
+                came_from[museum['name']] = current
+                g_score[museum['name']] = tentative_g_score
+                f_score[museum['name']] = g_score[museum['name']] + heuristic(
+                    Point(museum['latitude'], museum['longitude']), goal)
+                if museum not in [i[1] for i in open_list]:
+                    heapq.heappush(open_list, (f_score[museum['name']], museum))
+
+    return None
+
 
 @api.route('/plan_trip')
 class PlanTrip(Resource):
@@ -115,7 +166,8 @@ class PlanTrip(Resource):
                 return {'error': "Unable to fetch current location."}, 400
             start_location = Point(latitude=latitude, longitude=longitude)
         else:
-            chosen_museum = next((museum for museum in museums if start_location_input.lower() == museum['name'].lower()), None)
+            chosen_museum = next(
+                (museum for museum in museums if start_location_input.lower() == museum['name'].lower()), None)
             if chosen_museum:
                 start_location = Point(latitude=chosen_museum['latitude'], longitude=chosen_museum['longitude'])
             else:
@@ -125,13 +177,16 @@ class PlanTrip(Resource):
                         chosen_museum = museums[start_location_index]
                         start_location = Point(latitude=chosen_museum['latitude'], longitude=chosen_museum['longitude'])
                     else:
-                        return {'error': "Invalid start location number. Please enter a valid number or museum name."}, 400
+                        return {
+                            'error': "Invalid start location number. Please enter a valid number or museum name."}, 400
                 except ValueError:
                     return {'error': "Invalid start location input. Please enter a valid number or museum name."}, 400
 
         if not start_location:
             return {'error': "Could not determine start location. Please try again."}, 400
 
+        start_museum = {'name': 'start_point', 'latitude': start_location.latitude,
+                        'longitude': start_location.longitude}
         for museum in museums:
             museum_point = Point(latitude=museum['latitude'], longitude=museum['longitude'])
             museum['distance'] = calculate_distance(start_location, museum_point)
@@ -154,6 +209,7 @@ class PlanTrip(Resource):
 
         return {'trip_plan': reordered_museums}
 
+
 @api.route('/show_museums')
 class ShowMuseums(Resource):
     @api.expect(show_museums_input)
@@ -167,6 +223,7 @@ class ShowMuseums(Resource):
             return {'error': "No valid museums found for the provided cities. Please enter valid city names."}, 400
 
         return museums
+
 
 # Only include this block if you want to run this script directly for development
 if __name__ == '__main__':
