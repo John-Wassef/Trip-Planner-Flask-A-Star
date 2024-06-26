@@ -108,42 +108,19 @@ def heuristic(a, b):
     return geodesic((a.latitude, a.longitude), (b.latitude, b.longitude)).kilometers
 
 
-def a_star_search(start, goal, museums):
-    open_list = []
-    heapq.heappush(open_list, (0, start))
-    came_from = {}
-    g_score = {museum['name']: float('inf') for museum in museums}
-    g_score[start['name']] = 0
-    f_score = {museum['name']: float('inf') for museum in museums}
-    f_score[start['name']] = heuristic(Point(start['latitude'], start['longitude']), goal)
+def a_star_search(start, museums):
+    visited = set()
+    trip_plan = []
+    current_location = start
 
-    while open_list:
-        _, current = heapq.heappop(open_list)
+    while museums:
+        closest_museum = min(museums, key=lambda museum: heuristic(current_location, Point(museum['latitude'], museum['longitude'])))
+        closest_museum['distance'] = heuristic(current_location, Point(closest_museum['latitude'], closest_museum['longitude']))
+        trip_plan.append(closest_museum)
+        current_location = Point(closest_museum['latitude'], closest_museum['longitude'])
+        museums.remove(closest_museum)
 
-        if current['name'] == goal['name']:
-            total_path = [current]
-            while current['name'] in came_from:
-                current = came_from[current['name']]
-                total_path.append(current)
-            total_path.reverse()
-            return total_path
-
-        for museum in museums:
-            if museum['name'] == current['name']:
-                continue
-
-            tentative_g_score = g_score[current['name']] + heuristic(Point(current['latitude'], current['longitude']),
-                                                                     Point(museum['latitude'], museum['longitude']))
-
-            if tentative_g_score < g_score[museum['name']]:
-                came_from[museum['name']] = current
-                g_score[museum['name']] = tentative_g_score
-                f_score[museum['name']] = g_score[museum['name']] + heuristic(
-                    Point(museum['latitude'], museum['longitude']), goal)
-                if museum not in [i[1] for i in open_list]:
-                    heapq.heappush(open_list, (f_score[museum['name']], museum))
-
-    return None
+    return trip_plan
 
 
 @api.route('/plan_trip')
@@ -161,7 +138,7 @@ class PlanTrip(Resource):
 
         start_location = None
         if start_location_input.lower() == "current location":
-            latitude, longitude = 30.90808578682775, 29.8737211338345
+            latitude, longitude = get_current_location()
             if latitude is None or longitude is None:
                 return {'error': "Unable to fetch current location."}, 400
             start_location = Point(latitude=latitude, longitude=longitude)
@@ -185,29 +162,12 @@ class PlanTrip(Resource):
         if not start_location:
             return {'error': "Could not determine start location. Please try again."}, 400
 
-        start_museum = {'name': 'start_point', 'latitude': start_location.latitude,
-                        'longitude': start_location.longitude}
-        for museum in museums:
-            museum_point = Point(latitude=museum['latitude'], longitude=museum['longitude'])
-            museum['distance'] = calculate_distance(start_location, museum_point)
+        start_museum = Point(start_location.latitude, start_location.longitude)
 
-        # Sort museums by distance
-        sorted_museums = sorted(museums, key=lambda x: x['distance'])
+        # Run the A* algorithm
+        trip_plan = a_star_search(start_museum, museums)
 
-        # Reorder fields in each museum's dictionary
-        reordered_museums = []
-        for museum in sorted_museums:
-            reordered_museum = {
-                'name': museum['name'],
-                'latitude': museum['latitude'],
-                'longitude': museum['longitude'],
-                'city': museum['city'],
-                'imageUrl': museum.get('imageUrl', ''),
-                'distance': museum['distance']
-            }
-            reordered_museums.append(reordered_museum)
-
-        return {'trip_plan': reordered_museums}
+        return {'trip_plan': trip_plan}
 
 
 @api.route('/show_museums')
